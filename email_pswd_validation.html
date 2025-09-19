@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Secure Login</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card: #1e1e1e;
+      --muted: #aaa;
+      --accent: #00c853;
+      --link: #00c4ff;
+      --error: #ff5252;
+      --input-bg: #2a2a2a;
+      --input-border: #444;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: #fff;
+    }
+
+    .login-container {
+      width: 360px;
+      max-width: 94%;
+      padding: 28px;
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      margin: auto;
+      position: relative;
+      top: 6vh;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-size: 14px;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 11px;
+      font-size: 14px;
+      border-radius: 8px;
+      background: var(--input-bg);
+      border: 2px solid var(--input-border);
+      color: #fff;
+      outline: none;
+      transition: border-color .18s, box-shadow .18s;
+      box-sizing: border-box;
+    }
+
+    input.valid { border-color: var(--accent); }
+    input.invalid { border-color: var(--error); }
+
+    .password-wrapper { position: relative; }
+    .toggle-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 6px;
+    }
+
+    .validation-box {
+      margin-top: 12px;
+      font-size: 13px;
+      transition: opacity 0.4s ease, max-height 0.4s ease, margin 0.4s ease, padding 0.4s ease;
+      overflow: hidden;
+      opacity: 1;
+      max-height: 500px;
+    }
+    .validation-box.hidden {
+      opacity: 0;
+      max-height: 0;
+      margin: 0;
+      padding: 0;
+    }
+
+    .validation-box p { margin: 6px 0; }
+    .valid-text { color: var(--accent); }
+    .invalid-text { color: var(--error); }
+
+    .signin-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      border-radius: 24px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .signin-btn:disabled {
+      background: #666;
+      cursor: not-allowed;
+      opacity: .85;
+    }
+    .signin-btn:not(:disabled):hover {
+      transform: scale(1.03);
+    }
+
+    @media (max-width: 420px) {
+      .login-container { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="login-container" aria-labelledby="heading">
+    <h2 id="heading">Groot Library</h2>
+
+    <form id="loginForm" novalidate>
+      <!-- Email -->
+      <label for="email">Email address or ID number *</label>
+      <input id="email" name="email" type="text" placeholder="Enter your email or ID number" autocomplete="username" />
+      <div class="validation-box" aria-live="polite" id="email-box">
+        <p id="email-valid" class="invalid-text">❌ Enter a valid email or ID number</p>
+      </div>
+
+      <!-- Password -->
+      <label for="password">Password *</label>
+      <div class="password-wrapper">
+        <input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" />
+        <button type="button" id="togglePassword" class="toggle-btn">Show</button>
+      </div>
+
+      <div class="validation-box" aria-live="polite" id="pw-requirements">
+        <p id="length" class="invalid-text">❌ At least 8 characters</p>
+        <p id="uppercase" class="invalid-text">❌ At least one uppercase letter</p>
+        <p id="lowercase" class="invalid-text">❌ At least one lowercase letter</p>
+        <p id="number" class="invalid-text">❌ At least one number</p>
+        <p id="special" class="invalid-text">❌ At least one special character (!@#$%^&*)</p>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" id="signin-btn" class="signin-btn" disabled>Sign In</button>
+    </form>
+  </main>
+
+  <script>
+    const emailInput = document.getElementById('email');
+    const emailBox = document.getElementById('email-box');
+    const emailValid = document.getElementById('email-valid');
+    const passwordInput = document.getElementById('password');
+    const togglePasswordBtn = document.getElementById('togglePassword');
+    const signinBtn = document.getElementById('signin-btn');
+    const loginForm = document.getElementById('loginForm');
+    const pwBox = document.getElementById('pw-requirements');
+
+    const requirements = {
+      length: document.getElementById('length'),
+      uppercase: document.getElementById('uppercase'),
+      lowercase: document.getElementById('lowercase'),
+      number: document.getElementById('number'),
+      special: document.getElementById('special')
+    };
+
+    function setInputState(inputEl, ok) {
+      if (ok) {
+        inputEl.classList.add('valid');
+        inputEl.classList.remove('invalid');
+      } else {
+        inputEl.classList.add('invalid');
+        inputEl.classList.remove('valid');
+      }
+    }
+
+    function validateEmail(value) {
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      const idRegex = /^[0-9]{6,}$/;
+      const ok = emailRegex.test(value) || idRegex.test(value);
+
+      if (ok) {
+        emailBox.classList.add('hidden'); // fade out
+      } else {
+        emailBox.classList.remove('hidden'); // fade in
+        emailValid.className = 'invalid-text';
+        emailValid.textContent = '❌ Enter a valid email or ID number';
+      }
+
+      setInputState(emailInput, ok);
+      return ok;
+    }
+
+    function validatePassword(value) {
+      let ok = true;
+
+      if (value.length >= 8) {
+        requirements.length.className = 'valid-text';
+        requirements.length.textContent = '✅ At least 8 characters';
+      } else {
+        requirements.length.className = 'invalid-text';
+        requirements.length.textContent = '❌ At least 8 characters';
+        ok = false;
+      }
+
+      if (/[A-Z]/.test(value)) {
+        requirements.uppercase.className = 'valid-text';
+        requirements.uppercase.textContent = '✅ At least one uppercase letter';
+      } else {
+        requirements.uppercase.className = 'invalid-text';
+        requirements.uppercase.textContent = '❌ At least one uppercase letter';
+        ok = false;
+      }
+
+      if (/[a-z]/.test(value)) {
+        requirements.lowercase.className = 'valid-text';
+        requirements.lowercase.textContent = '✅ At least one lowercase letter';
+      } else {
+        requirements.lowercase.className = 'invalid-text';
+        requirements.lowercase.textContent = '❌ At least one lowercase letter';
+        ok = false;
+      }
+
+      if (/\d/.test(value)) {
+        requirements.number.className = 'valid-text';
+        requirements.number.textContent = '✅ At least one number';
+      } else {
+        requirements.number.className = 'invalid-text';
+        requirements.number.textContent = '❌ At least one number';
+        ok = false;
+      }
+
+      if (/[!@#$%^&*(),.?":{}|<>]/.test(value)) {
+        requirements.special.className = 'valid-text';
+        requirements.special.textContent = '✅ At least one special character';
+      } else {
+        requirements.special.className = 'invalid-text';
+        requirements.special.textContent = '❌ At least one special character';
+        ok = false;
+      }
+
+      pwBox.classList.toggle('hidden', ok); // fade in/out
+      setInputState(passwordInput, ok);
+      return ok;
+    }
+
+    togglePasswordBtn.addEventListener("click", () => {
+      const isHidden = passwordInput.type === "password";
+      passwordInput.type = isHidden ? "text" : "password";
+      togglePasswordBtn.textContent = isHidden ? "Hide" : "Show";
+    });
+
+    function checkForm() {
+      const emailOk = validateEmail(emailInput.value.trim());
+      const passwordOk = validatePassword(passwordInput.value);
+      signinBtn.disabled = !(emailOk && passwordOk);
+    }
+
+    emailInput.addEventListener('input', checkForm);
+    passwordInput.addEventListener('input', checkForm);
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!signinBtn.disabled) {
+        alert('Form ready to submit!');
+      }
+    });
+
+    checkForm(); // run once on load
+  </script>
+</body>
+</html>
